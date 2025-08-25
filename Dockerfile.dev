@@ -1,0 +1,39 @@
+# Dockerfile.dev - Optimizado para desarrollo local con Docker Compose
+
+FROM python:3.12-slim
+
+# Instala dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instala Poetry globalmente en la imagen
+ENV POETRY_VERSION=1.8.2
+RUN pip install "poetry==$POETRY_VERSION"
+
+# Le decimos a Poetry que instale las dependencias en el entorno global de Python del contenedor,
+# ya que el propio contenedor es nuestro entorno virtual.
+RUN poetry config virtualenvs.create false
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Crea y cambia al usuario no-root
+# Hacemos esto antes de copiar el código para que los archivos tengan el dueño correcto
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+# Copia los archivos de dependencias
+COPY --chown=app:app poetry.lock pyproject.toml ./
+
+# Copia el resto del código
+COPY --chown=app:app . .
+
+# Expone el puerto
+EXPOSE 8000
+
+# El comando final será sobreescrito por docker-compose.yml,
+# pero dejamos uno por defecto para mantener el contenedor vivo.
+CMD ["tail", "-f", "/dev/null"]

@@ -8,11 +8,11 @@ This API can:
 - Maintain conversational memory for follow-up questions.
 - Differentiate between product searches and simple chitchat.
 
-
-
 ## ✨ Features
 
 - **FastAPI Backend:** A robust and modern API framework.
+- **Modern Dependency Management:** Project dependencies and virtual environments are managed with **Poetry**.
+- **Automated Code Quality:** Code formatting and linting are enforced automatically before each commit using **pre-commit** with `black` and `ruff`.
 - **Cloud-Native Stack:** Runs on Google Cloud Run and connects to a managed Cloud SQL database.
 - **Vector Database:** Uses PostgreSQL with the `pg_vector` extension for efficient similarity searches.
 - **Cloud AI Models:** Leverages Google's Vertex AI for state-of-the-art text embeddings.
@@ -34,12 +34,17 @@ The application follows a decoupled, service-based architecture:
 ### Prerequisites
 
 - [Docker & Docker Compose](https://www.docker.com/products/docker-desktop/)
+- [Poetry](https://python-poetry.org/docs/#installation)
+- Python >=3.12
 - [Terraform CLI](https://developer.hashicorp.com/terraform/tutorials/gcp-get-started/install-cli)
 - [Google Cloud SDK (gcloud)](https://cloud.google.com/sdk/docs/install)
-- Python 3.10 or 3.11
 - A Google Cloud Project with billing enabled.
 
-###  локальный Setup (Local Development)
+### Local Setup
+
+#### Method 1: Running with Docker (Recommended)
+
+This is the easiest way to get started, as it handles all dependencies within a container.
 
 1.  **Clone the repository:**
     ```bash
@@ -47,100 +52,96 @@ The application follows a decoupled, service-based architecture:
     cd <your-repo-name>
     ```
 
-2.  **Create Service Account Key:**
-    - Go to your GCP project's **IAM > Service Accounts** page.
-    - Find the `api-rag-sa` service account.
-    - Go to the **Keys** tab, click **Add Key > Create new key**, and download the JSON file.
-    - Move the downloaded file to the project root and rename it to `gcp-credentials.json`.
+2.  **Configure GCP Credentials:**
+    - Create a Service Account key as a JSON file and save it in the project root as `gcp-credentials.json`.
+    - **Important:** Make sure `gcp-credentials.json` and `.env` are listed in your `.gitignore` file to avoid committing secrets.
 
 3.  **Create `.env` file:**
-    Create a file named `.env` in the project root and populate it with your local and GCP configuration. Use the `env.example` as a template.
+    Copy the `env.example` file to a new file named `.env` and fill in the values for your local and GCP setup.
 
-    ```
-    # .env - Local Development Environment Variables
-
-    # --- GCP ---
-    GCP_PROJECT_ID="your-gcp-project-id"
-    GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
-
-    # --- Local Database (Docker) ---
-    DB_USER="rag_user"
-    DB_PASSWORD="testpassword"
-    DB_HOST="db"
-    DB_PORT="5432"
-    DB_NAME="rag_db"
-    ```
-
-4.  **Add credentials to `.gitignore`:**
-    Make sure your `.gitignore` file prevents your credentials from being committed:
-    ```
-    .env
-    gcp-credentials.json
-    __pycache__/
-    *.pyc
-    ```
-
-5.  **Run the application:**
-    Use Docker Compose to build and run the entire local environment with a single command:
+4.  **Run the application:**
+    Use Docker Compose to build and run the entire local stack (API + Database). The command now uses `Dockerfile.dev` which automatically installs dependencies with Poetry.
     ```bash
     docker-compose up --build
     ```
-    The API will be available at `http://127.0.0.1:8000`.
+    The API will be available at `http://127.0.0.1:8000/docs`.
+
+#### Method 2: Running Locally with Poetry (Without Docker)
+
+Use this method if you prefer to run the Python application directly on your machine.
+
+1.  **Complete Steps 1-3** from the Docker method above (Clone, Credentials, `.env`).
+
+2.  **Install Dependencies:**
+    Navigate to the project root and let Poetry install the required dependencies and create a virtual environment.
+    ```bash
+    poetry install
+    ```
+
+3.  **Activate the Virtual Environment:**
+    Run your commands inside the virtual environment managed by Poetry.
+    ```bash
+    poetry shell
+    ```
+
+4.  **Install pre-commit hooks:**
+    Activate the automated code quality checks for your local repository.
+    ```bash
+    pre-commit install
+    ```
+
+5.  **Run the API:**
+    Start the Uvicorn server.
+    ```bash
+    uvicorn src.main:app --reload
+    ```
 
 ### ☁️ Deployment to Google Cloud
 
+The deployment process uses the production-optimized `Dockerfile`.
+
 1.  **Configure Terraform:**
-    - Create a file named `terraform.tfvars` and add your GCP project and billing information:
-      ```tfvars
-      gcp_project_id      = "your-gcp-project-id"
-      gcp_billing_account = "XXXXXX-XXXXXX-XXXXXX"
-      ```
+    - Create a file named `terraform.tfvars` and add your GCP project and billing information.
 
 2.  **Deploy Infrastructure:**
-    Initialize and apply the Terraform configuration. This will build all the required cloud resources.
     ```bash
     terraform init
     terraform apply
     ```
 
-3.  **Build and Deploy the Application:**
+3.  **Build, Push, and Deploy the Application:**
     - Authenticate Docker with GCP:
       ```bash
       gcloud auth configure-docker us-central1-docker.pkg.dev
       ```
-    - Build the Docker image:
+    - Build, push, and deploy using the provided names for your project, repository, and service.
       ```bash
+      # Build
       docker build -t us-central1-docker.pkg.dev/YOUR_PROJECT_ID/api-rag-repo/rag-api:v1 .
-      ```
-    - Push the image to Artifact Registry:
-      ```bash
+
+      # Push
       docker push us-central1-docker.pkg.dev/YOUR_PROJECT_ID/api-rag-repo/rag-api:v1
-      ```
-    - Deploy the image to Cloud Run:
-      ```bash
+
+      # Deploy
       gcloud run deploy api-rag-service \
         --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/api-rag-repo/rag-api:v1 \
         --region=us-central1
       ```
 
-##  API Usage
+## API Usage
 
 The API provides interactive documentation via Swagger UI. Once the service is running (locally or in the cloud), navigate to `/docs`.
 
 ### Example: Upload CSV
-
-Upload a product catalog to be ingested into the vector database.
 
 ```bash
 curl -X POST "[http://127.0.0.1:8000/api/upload-csv](http://127.0.0.1:8000/api/upload-csv)" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@./path/to/your/flipkart_ecommerce_sample.csv;type=text/csv"
-```
+  ```
 
 ### Example: Generate Prompt
-
-Ask a question and get a RAG-generated prompt.
 
 ```bash
 curl -X POST "[http://127.0.0.1:8000/api/generate-prompt?k=2](http://127.0.0.1:8000/api/generate-prompt?k=2)" \
@@ -150,4 +151,4 @@ curl -X POST "[http://127.0.0.1:8000/api/generate-prompt?k=2](http://127.0.0.1:8
     "session_id": "user@example.com",
     "question": "shampoo for dogs"
   }'
-```
+  ```

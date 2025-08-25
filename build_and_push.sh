@@ -6,7 +6,7 @@ PROJECT_ID="rag-project-469718"
 REGION="us-central1"
 REPO="rag-app"
 IMAGE="rag-api" # ¡Nombre corregido!
-TAG="v1"
+TAG="v2"
 
 # --- Autenticación ---
 echo "🔑 Autenticando Docker..."

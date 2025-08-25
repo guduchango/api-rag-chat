@@ -8,7 +8,7 @@ from langchain.memory import ConversationBufferWindowMemory
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_postgres import PGVector
 from sqlalchemy import make_url, create_engine, text
-from core.config import PROMPT_TEMPLATE, CHITCHAT_RESPONSES
+from ..core.config import PROMPT_TEMPLATE, CHITCHAT_RESPONSES
 
 # Configure logger
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)

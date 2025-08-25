@@ -15,7 +15,9 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: rag-api-local
     ports:
       - "8000:8000"
@@ -28,11 +30,7 @@ services:
     volumes:
       - ./gcp-credentials.json:/app/gcp-credentials.json
       - .:/app
-    # 👇 AGREGAR ESTO para poder entrar al contenedor si falla
-    # stdin_open: true
-    # tty: true
-    # 👇 OPCIONAL: Cambiar el comando para debugging
-    # command: tail -f /dev/null  # Esto mantiene el contenedor vivo
+    command: sh -c "poetry install && poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:
   pgdata:

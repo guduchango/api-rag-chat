@@ -1,9 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Query
 import shutil
 import os
-from models.schemas import QueryRequest, QueryResponse, UploadResponse
-from core.config import UPLOADS_DIR
-from core import rag_service
+from ..models.schemas import QueryRequest, QueryResponse, UploadResponse
+from ..core.config import UPLOADS_DIR
+from ..core import rag_service
 from sqlalchemy import text, create_engine, make_url
 from sqlalchemy.exc import OperationalError
 from google.cloud.sql.connector import Connector
