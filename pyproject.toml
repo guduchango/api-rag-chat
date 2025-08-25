@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "api-rag-chat"
+version = "0.1.0"
+description = "complete, cloud-native API that uses a Retrieval-Augmented Generation (RAG) architecture to answer user questions based on a product catalog. It's built with a modern Python stack and deployed entirely on Google Cloud Platform using Infrastructure as Code."
+authors = ["Edgardo Ponce <gudu.chango@gmail.com>"]
+readme = "readme.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+fastapi = ">=0.116.1,<0.117.0"
+uvicorn = {version = ">=0.35.0,<0.36.0", extras = ["standard"]}
+python-multipart = ">=0.0.20,<0.0.21"
+email-validator = ">=2.2.0,<3.0.0"
+python-dotenv = ">=1.1.1,<2.0.0"
+langchain = ">=0.3.27,<0.4.0"
+langchain-core = ">=0.3.74,<0.4.0"
+langchain-google-vertexai = ">=2.0.28,<3.0.0"
+langchain-postgres = ">=0.0.15,<0.0.16"
+pandas = ">=2.3.2,<3.0.0"
+google-cloud-aiplatform = ">=1.110.0,<2.0.0"
+cloud-sql-python-connector = {version = ">=1.18.4,<2.0.0", extras = ["pg8000"]}
+google-cloud-secret-manager = ">=2.24.0,<3.0.0"
+psycopg2-binary = ">=2.9.10,<3.0.0"
+psycopg-binary = ">=3.2.9,<4.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pre-commit = "^4.3.0"
+black = "^25.1.0"
+ruff = "^0.12.10"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

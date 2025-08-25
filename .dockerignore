@@ -1,3 +1,23 @@
 # .dockerignore
 
-.env
+# Ignorar el entorno virtual de Poetry local
+.venv
+
+# Ignorar archivos de Git
+.git
+.gitignore
+
+# Ignorar archivos de configuración de IDEs
+.vscode/
+.idea/
+
+# Ignorar caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorar el propio archivo de Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

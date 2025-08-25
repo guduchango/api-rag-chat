@@ -8,8 +8,8 @@ import sys
 import logging
 from dotenv import load_dotenv
 
-from api import router as api_router
-from core import rag_service
+from .api import router as api_router
+from .core import rag_service
 
 # Configurar logging para Cloud Run
 logging.basicConfig(
