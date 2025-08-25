@@ -1,0 +1,61 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# --- Virtualenv ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- FastAPI / Config ---
+.env
+*.db
+*.sqlite3
+
+# --- Logs ---
+*.log
+logs/
+*.pid
+
+# --- IDEs & OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+# Ignorar solo si construís imágenes locales con archivos extra
+docker-compose.override.yml
+*.local.yml
+
+# Archivos de estado de Terraform y variables
+*.tfstate
+*.tfstate.*
+crash.log
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
+
+# Variables sensibles
+*.tfvars
+*.tfvars.json
+
+# Archivos de entorno
+.env
+*.secret
+gcp-credentials.json
+github-actions-key.json
+build_and_push.sh
+
+data/
