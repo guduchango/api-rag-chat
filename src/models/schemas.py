@@ -24,12 +24,14 @@ class QueryResponse(BaseModel):
     Defines the structure of the response sent back to the user.
     """
 
-    final_prompt: str
+    answer: str
+    debug_prompt: str | None = None
 
     class Config:
         json_schema_extra = {
             "example": {
-                "final_prompt": "You are an expert sales assistant...\n\n**Product context found:**\nProduct: Sicons All Purpose Arnica Dog Shampoo...\n\n**Customer question:**\nI'm looking for a dog shampoo\n\n**Your answer:"
+                "answer": "Yes, we have the Sicons All Purpose Arnica Dog Shampoo. It's great for all dog breeds and has a pleasant arnica fragrance.",
+                "debug_prompt": "You are an expert sales assistant... **Recent conversation history:**\nHuman: Hi, my name is Alex.\nAI: Hello Alex! How can I help you today? ...",
             }
         }
 

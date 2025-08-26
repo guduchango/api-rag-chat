@@ -211,16 +211,52 @@ def get_or_create_memory_for_session(session_id: str):
     return conversation_memory_store[session_id]
 
 
-def generate_prompt_with_memory(session_id: str, retriever, question: str):
-    # This function generates the final prompt using context and conversation history
+def get_rag_answer(session_id: str, question: str, k: int) -> dict:
+    """
+    Orchestrates the full RAG chain to get a final answer.
+    1. Retrieves context from the vector store.
+    2. Invokes the LLM with context, chat history, and the question.
+    3. Saves the actual question and LLM answer to memory.
+    4. Returns a dictionary with the final answer and the generated prompt.
+    """
+    if not vector_store or not llm:
+        logger.error("Vector store or LLM not initialized. Cannot get RAG answer.")
+        error_answer = "I'm sorry, but my knowledge base is currently unavailable. Please try again later."
+        return {
+            "answer": error_answer,
+            "prompt": "Error: Vector store or LLM not initialized.",
+        }
+
+    logger.info(f"🧠 Generating RAG answer for session '{session_id}'")
+
+    # 1. Get the retriever
+    retriever = vector_store.as_retriever(search_kwargs={"k": k})
+
+    # 2. Get the conversation memory
     memory = get_or_create_memory_for_session(session_id)
+
+    # 3. Retrieve relevant documents
     docs = retriever.invoke(question)
     context = "\n\n---\n\n".join([doc.page_content for doc in docs])
-    chat_history = memory.load_memory_variables({})
+    logger.info(f"📚 Retrieved {len(docs)} documents for context.")
+
+    # 4. Load chat history
+    chat_history = memory.load_memory_variables({}).get("chat_history", "")
+
+    # 5. Create the prompt
     prompt_template = PromptTemplate.from_template(PROMPT_TEMPLATE)
     final_prompt = prompt_template.format(
-        chat_history=chat_history.get("chat_history", ""),
-        context=context,
-        question=question,
+        chat_history=chat_history, context=context, question=question
     )
-    return final_prompt, memory
+
+    # 6. Invoke the LLM to get the answer
+    logger.info("🗣️ Invoking LLM to generate the final answer...")
+    answer = llm.invoke(final_prompt).strip()
+    logger.info(f"💬 LLM generated answer: '{answer}'")
+
+    # 7. Save the actual question and answer to memory
+    memory.save_context({"input": question}, {"output": answer})
+    logger.info(f"💾 Saved context to memory for session '{session_id}'.")
+
+    # 8. Return the final answer and the prompt for debugging
+    return {"answer": answer, "prompt": final_prompt}

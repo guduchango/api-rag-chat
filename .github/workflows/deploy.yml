@@ -8,6 +8,8 @@ env:
   PROJECT_ID: rag-project-469718
   REGION: us-central1
   REPOSITORY: rag-app
+  IMAGE: rag-api
+  LABEL: v2
 
 jobs:
   # === Job 1: Run pre-commit checks ===
@@ -61,11 +63,11 @@ jobs:
 
       - name: 🏗️ Build Docker image
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/api:${{ github.sha }} .
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }} .
 
       - name: 📤 Push to Artifact Registry
         run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/api:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }}
 
   # === Job 3: Deploy to Cloud Run ===
   deploy:
@@ -82,4 +84,4 @@ jobs:
         with:
           service: rag-app
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/api:v2
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }}

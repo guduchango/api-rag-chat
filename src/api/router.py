@@ -39,35 +39,26 @@ async def upload_csv(background_tasks: BackgroundTasks, file: UploadFile = File(
     )
 
 
-@router.post("/generate-prompt", response_model=QueryResponse)
-async def generate_prompt_endpoint(
-    request: QueryRequest, k: int = Query(3, ge=1, le=10)
-):
+@router.post("/chat", response_model=QueryResponse)
+async def chat_endpoint(request: QueryRequest, k: int = Query(3, ge=1, le=10)):
     # 1. Clasificar la intención del usuario primero
     intent = rag_service.classify_intent(request.question)
 
     # 2. Manejar intenciones de chitchat
     if intent in CHITCHAT_RESPONSES:
         response_text = CHITCHAT_RESPONSES[intent]["response"]
-        return QueryResponse(final_prompt=response_text)
+        return QueryResponse(answer=response_text)
 
     # 3. Si la intención es 'product_query', proceder con RAG
     if not rag_service.vector_store:
         raise HTTPException(status_code=503, detail="The vector database is not ready.")
 
-    retriever = rag_service.vector_store.as_retriever(search_kwargs={"k": k})
-
-    final_prompt, memory = rag_service.generate_prompt_with_memory(
-        session_id=request.session_id, retriever=retriever, question=request.question
+    rag_response = rag_service.get_rag_answer(
+        session_id=request.session_id, question=request.question, k=k
     )
-
-    # Save the context of the conversation
-    memory.save_context(
-        {"input": request.question},
-        {"output": "I have provided relevant information about products."},
+    return QueryResponse(
+        answer=rag_response["answer"], debug_prompt=rag_response["prompt"]
     )
-
-    return QueryResponse(final_prompt=final_prompt)
 
 
 @router.get("/status")
