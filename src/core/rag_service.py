@@ -2,13 +2,18 @@ import os
 import pandas as pd
 import logging
 import sys
+import json
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationBufferWindowMemory
-from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_google_vertexai import VertexAIEmbeddings, VertexAI
 from langchain_postgres import PGVector
 from sqlalchemy import make_url, create_engine, text
-from ..core.config import PROMPT_TEMPLATE, CHITCHAT_RESPONSES
+from langchain_core.output_parsers import StrOutputParser
+from ..core.config import (
+    PROMPT_TEMPLATE,
+    INTENT_CLASSIFICATION_PROMPT,
+)
 
 # Configure logger
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -47,17 +52,37 @@ def _get_db_engine():
 def setup_embeddings():
     """Initializes the Vertex AI embeddings model."""
     logger.info("⚙️ Initializing Vertex AI embeddings...")
+
     project_id = os.environ.get("GCP_PROJECT_ID")
+    location = os.environ.get("GCP_LOCATION", "us-central1")  # default por si falta
+
+    logger.info(f"📍 Embeddings config -> project: {project_id}, location: {location}")
+
     if not project_id:
         raise ValueError("GCP_PROJECT_ID environment variable is not set.")
-    return VertexAIEmbeddings(model_name="text-embedding-004", project=project_id)
+
+    return VertexAIEmbeddings(
+        model_name="text-embedding-004",
+        project=project_id,
+        location=location,
+    )
 
 
 def initialize_vector_store():
-    """Initializes the vector store and database connection."""
-    global vector_store, embeddings_model
+    """Initializes the vector store, LLM, and database connection."""
+    global vector_store, embeddings_model, llm
     if not embeddings_model:
         embeddings_model = setup_embeddings()
+
+    if not llm:
+        logger.info("⚙️ Initializing Vertex AI LLM (Gemini)...")
+        # Usamos un modelo rápido y eficiente para la clasificación
+        llm = VertexAI(
+            model_name="gemini-2.0-flash-lite-001",
+            project=GCP_PROJECT_ID,
+            location="us-central1",
+        )
+        logger.info("✅ LLM initialized.")
 
     collection_name = "rag_products_collection"
     logger.info(
@@ -108,6 +133,20 @@ def process_csv_to_documents(csv_path):
         return []
     documents = []
     for _, row in df.iterrows():
+        # Extract the first image URL safely
+        image_url = "#"  # Default value
+        image_data = row.get("image")
+        if pd.notna(image_data):
+            try:
+                # The column contains a string representation of a list
+                image_list = json.loads(image_data)
+                if isinstance(image_list, list) and image_list:
+                    image_url = image_list[0]
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(
+                    f"Could not parse image URL for product {row['product_name']}: {image_data}"
+                )
+
         category_tree = (
             str(row.get("product_category_tree", "General"))
             .strip('[]"')
@@ -119,20 +158,48 @@ def process_csv_to_documents(csv_path):
             "brand": row["brand"],
             "price": str(row.get("retail_price", "N/A")),
             "url": row.get("product_url", "#"),
+            "image_url": image_url,
         }
         documents.append(Document(page_content=page_content, metadata=metadata))
     logger.info(f"✅ Created {len(documents)} documents from the CSV.")
     return documents
 
 
-def check_for_chitchat(question: str) -> str | None:
-    # This function checks if the question is chitchat/small talk
-    question_lower = question.lower()
-    for intent in CHITCHAT_RESPONSES:
-        for keyword in CHITCHAT_RESPONSES[intent]["keywords"]:
-            if keyword in question_lower:
-                return CHITCHAT_RESPONSES[intent]["response"]
-    return None
+def classify_intent(question: str) -> str:
+    """
+    Classifies the user's intent using an LLM to decide if it's a chitchat
+    or a product-related query.
+    """
+    if not llm:
+        logger.warning("LLM not initialized, defaulting to product_query.")
+        return "product_query"
+
+    logger.info(f"🤖 Classifying intent for question: '{question}'")
+
+    prompt = PromptTemplate.from_template(INTENT_CLASSIFICATION_PROMPT)
+    # Usamos un parser de string simple y luego parseamos el JSON manualmente para mayor robustez
+    chain = prompt | llm | StrOutputParser()
+
+    try:
+        llm_output = chain.invoke({"question": question})
+        # El LLM a veces devuelve markdown (```json ... ```), lo limpiamos.
+        cleaned_output = (
+            llm_output.strip().replace("```json", "").replace("```", "").strip()
+        )
+        response_json = json.loads(cleaned_output)
+        intent = response_json.get("intent", "product_query")
+        logger.info(f"✅ Intent classified as: '{intent}'")
+        return intent
+    except (json.JSONDecodeError, AttributeError) as e:
+        logger.error(
+            f"❌ Error parsing intent JSON from LLM output: '{llm_output}'. Error: {e}. Defaulting to 'product_query'."
+        )
+        return "product_query"
+    except Exception as e:
+        logger.error(
+            f"❌ An unexpected error occurred during intent classification: {e}. Defaulting to 'product_query'."
+        )
+        return "product_query"
 
 
 def get_or_create_memory_for_session(session_id: str):
