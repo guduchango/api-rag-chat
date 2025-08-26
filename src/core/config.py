@@ -31,15 +31,32 @@ Use the conversation history to understand the context, and base your final answ
 # --- Predefined Responses for Chitchat ---
 CHITCHAT_RESPONSES = {
     "greeting": {
-        "keywords": ["hello", "hi", "good day", "good morning", "how are you"],
         "response": "Hello! I am your shopping assistant. What product are you looking for today?",
     },
     "thanks": {
-        "keywords": ["thanks", "thank you", "i appreciate it", "very kind"],
         "response": "You're welcome! If you need anything else, feel free to ask.",
     },
     "goodbye": {
-        "keywords": ["bye", "goodbye", "see you later"],
         "response": "Goodbye! Have a great day.",
     },
+    "identity": {
+        "response": "I am a shopping assistant powered by Google's AI. I can help you find products from the store catalog."
+    },
 }
+
+# --- New Prompt for Intent Classification ---
+INTENT_CLASSIFICATION_PROMPT = """
+Your task is to classify the user's intent based on their question.
+You must classify the question into one of the following categories:
+- "greeting": For hellos, good mornings, etc.
+- "goodbye": For goodbyes, see you later, etc.
+- "thanks": For expressions of gratitude.
+- "identity": For questions about who you are or what you can do.
+- "product_query": For any question related to products, prices, availability, or searches. This is the default category.
+
+The user's question is:
+"{question}"
+
+You must respond ONLY with a JSON object containing the classification, like this:
+{{"intent": "category_name"}}
+"""

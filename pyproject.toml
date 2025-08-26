@@ -23,6 +23,7 @@ cloud-sql-python-connector = {version = ">=1.18.4,<2.0.0", extras = ["pg8000"]}
 google-cloud-secret-manager = ">=2.24.0,<3.0.0"
 psycopg2-binary = ">=2.9.10,<3.0.0"
 psycopg-binary = ">=3.2.9,<4.0.0"
+langchain-google-genai = "^2.1.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
