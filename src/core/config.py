@@ -32,14 +32,14 @@ Use the conversation history to understand the context, and base your final answ
 CHITCHAT_RESPONSES = {
     "greeting": {
         "keywords": ["hello", "hi", "good day", "good morning", "how are you"],
-        "response": "Hello! I am your shopping assistant. What product are you looking for today?"
+        "response": "Hello! I am your shopping assistant. What product are you looking for today?",
     },
     "thanks": {
         "keywords": ["thanks", "thank you", "i appreciate it", "very kind"],
-        "response": "You're welcome! If you need anything else, feel free to ask."
+        "response": "You're welcome! If you need anything else, feel free to ask.",
     },
     "goodbye": {
         "keywords": ["bye", "goodbye", "see you later"],
-        "response": "Goodbye! Have a great day."
-    }
+        "response": "Goodbye! Have a great day.",
+    },
 }
