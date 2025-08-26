@@ -44,7 +44,7 @@ resource "google_project_service" "required_apis" {
     "artifactregistry.googleapis.com", # Para guardar la imagen Docker
     "sqladmin.googleapis.com"       # Para Cloud SQL
   ])
-  
+
   service            = each.value
   disable_on_destroy = false
 }
@@ -60,10 +60,10 @@ resource "google_sql_database_instance" "postgres" {
   name             = "rag-postgres"
   database_version = "POSTGRES_15"
   region           = var.gcp_region
-  
+
   settings {
     tier = "db-f1-micro"  # La más barata
-    
+
     # Permitir acceso público (más simple para empezar)
     ip_configuration {
       ipv4_enabled = true
@@ -73,9 +73,9 @@ resource "google_sql_database_instance" "postgres" {
       }
     }
   }
-  
+
   deletion_protection = false  # Para poder borrar fácilmente en testing
-  
+
   depends_on = [google_project_service.required_apis]
 }
 
@@ -111,7 +111,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
   repository_id = "rag-app"
   format        = "DOCKER"
   location      = var.gcp_region
-  
+
   depends_on = [google_project_service.required_apis]
 }
 
@@ -119,39 +119,39 @@ resource "google_artifact_registry_repository" "docker_repo" {
 resource "google_cloud_run_v2_service" "app" {
   name     = "rag-app"
   location = var.gcp_region
-  
+
   template {
     service_account = google_service_account.api_service_account.email
-    
+
     containers {
       # La imagen que vas a subir
       image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/rag-app/rag-api:${var.docker_image_tag}"
-      
+
       ports {
         container_port = 8000
       }
-      
+
       # Variables de entorno que tu app necesitará
       env {
         name  = "DB_HOST"
         value = google_sql_database_instance.postgres.public_ip_address
       }
-      
+
       env {
         name  = "DB_NAME"
         value = "rag_db"
       }
-      
+
       env {
         name  = "DB_USER"
         value = "rag_user"
       }
-      
+
       env {
         name  = "DB_PASSWORD"
         value = random_password.db_password.result
       }
-      
+
       env {
         name  = "GCP_PROJECT_ID"
         value = var.gcp_project_id
