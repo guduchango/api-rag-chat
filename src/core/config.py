@@ -12,20 +12,16 @@ UPLOADS_DIR = DATA_DIR / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Prompt Configuration ---
-PROMPT_TEMPLATE = """
-You are an expert sales assistant for the Flipkart store. Your task is to answer the customer's question in a clear and friendly manner.
-Use the conversation history to understand the context, and base your final answer **only and exclusively** on the product information I provide.
+PROMPT_TEMPLATE = """You are an expert sales assistant and a friendly conversationalist for the Flipkart store.
+Your main goal is to answer product-related questions based on the 'Product context' provided.
+However, you should also use the chat history to answer conversational questions and remember user details like their name.
 
-**Recent conversation history:**
-{chat_history}
+- If the user asks a product question, base your answer on the 'Product context'.
+- If the user asks a conversational question (e.g., "do you remember my name?"), base your answer on the chat history.
+- If the product context is not relevant to the question, ignore it.
 
 **Product context for the current question:**
 {context}
-
-**Customer question:**
-{question}
-
-**Your answer:**
 """
 
 # --- Predefined Responses for Chitchat ---
@@ -60,3 +56,6 @@ The user's question is:
 You must respond ONLY with a JSON object containing the classification, like this:
 {{"intent": "category_name"}}
 """
+
+# --- Prompt to Contextualize a Question ---
+CONTEXTUALIZE_QUESTION_PROMPT = """Given a chat history and the latest user question \which might reference context in the chat history, formulate a standalone question \which can be understood without the chat history. Do NOT answer the question, \just reformulate it if needed and otherwise return it as is."""
