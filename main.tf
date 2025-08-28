@@ -1,23 +1,21 @@
-# main.tf (Versión Minimalista - Solo lo Esencial)
-
-# --- Variables Básicas ---
+# --- Basic Variables ---
 variable "docker_image_tag" {
   type        = string
   description = "The Docker image tag to deploy (e.g., the git commit SHA)."
-  default     = "v1" # Un valor por defecto por si no se especifica
+  default     = "v1" # A default value if not specified
 }
 variable "gcp_project_id" {
   type        = string
-  description = "El ID del proyecto de Google Cloud"
+  description = "The Google Cloud project ID."
 }
 
 variable "gcp_region" {
   type        = string
-  description = "La región de GCP para desplegar los recursos"
+  description = "The GCP region to deploy resources in."
   default     = "us-central1"
 }
 
-# --- Configuración de Terraform ---
+# --- Terraform Configuration ---
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -37,76 +35,76 @@ provider "google" {
   region  = var.gcp_region
 }
 
-# --- Habilitación de APIs mínimas necesarias ---
+# --- Enable Required APIs ---
 resource "google_project_service" "required_apis" {
   for_each = toset([
-    "run.googleapis.com",           # Para Cloud Run
-    "artifactregistry.googleapis.com", # Para guardar la imagen Docker
-    "sqladmin.googleapis.com"       # Para Cloud SQL
+    "run.googleapis.com",              # For Cloud Run
+    "artifactregistry.googleapis.com", # For storing the Docker image
+    "sqladmin.googleapis.com"          # For Cloud SQL
   ])
 
   service            = each.value
   disable_on_destroy = false
 }
 
-# --- Contraseña segura para la base de datos ---
+# --- Secure Database Password ---
 resource "random_password" "db_password" {
   length  = 16
   special = true
 }
 
-# --- Base de datos PostgreSQL ---
+# --- PostgreSQL Database ---
 resource "google_sql_database_instance" "postgres" {
   name             = "rag-postgres"
   database_version = "POSTGRES_15"
   region           = var.gcp_region
 
   settings {
-    tier = "db-f1-micro"  # La más barata
+    tier = "db-f1-micro" # The cheapest tier
 
-    # Permitir acceso público (más simple para empezar)
+    # Allow public access (simpler for getting started)
     ip_configuration {
       ipv4_enabled = true
       authorized_networks {
-        value = "0.0.0.0/0"  # ⚠️ Acceso desde cualquier IP - solo para testing
+        value = "0.0.0.0/0" # ⚠️ Access from any IP - for testing only
         name  = "all"
       }
     }
   }
 
-  deletion_protection = false  # Para poder borrar fácilmente en testing
+  deletion_protection = false # To allow easy deletion during testing
 
   depends_on = [google_project_service.required_apis]
 }
 
-# --- Base de datos específica ---
+# --- Specific Database ---
 resource "google_sql_database" "app_db" {
   instance = google_sql_database_instance.postgres.name
   name     = "rag_db"
 }
 
-# --- Usuario de la base de datos ---
+# --- Database User ---
 resource "google_sql_user" "app_user" {
   instance = google_sql_database_instance.postgres.name
   name     = "rag_user"
   password = random_password.db_password.result
 }
 
-# --- Service Account para tu aplicación ---
+# --- Service Account for the Application ---
 resource "google_service_account" "api_service_account" {
   account_id   = "api-rag-sa"
   display_name = "Service Account for RAG API"
-  description  = "Cuenta de servicio para la API RAG"
+  description  = "Service account for the RAG API"
 }
 
-# --- Permisos mínimos necesarios ---
+# --- Minimum Required Permissions ---
 resource "google_project_iam_member" "ai_user" {
   project = var.gcp_project_id
   role    = "roles/aiplatform.user"
   member  = "serviceAccount:${google_service_account.api_service_account.email}"
 }
 
-# --- Repositorio para la imagen Docker ---
+# --- Docker Image Repository ---
 resource "google_artifact_registry_repository" "docker_repo" {
   repository_id = "rag-app"
   format        = "DOCKER"
@@ -115,7 +113,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
   depends_on = [google_project_service.required_apis]
 }
 
-# --- Servicio Cloud Run (contenedor Docker) ---
+# --- Cloud Run Service (Docker container) ---
 resource "google_cloud_run_v2_service" "app" {
   name     = "rag-app"
   location = var.gcp_region
@@ -124,14 +122,12 @@ resource "google_cloud_run_v2_service" "app" {
     service_account = google_service_account.api_service_account.email
 
     containers {
-      # La imagen que vas a subir
       image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/rag-app/rag-api:${var.docker_image_tag}"
 
       ports {
         container_port = 8000
       }
 
-       # --- AÑADE ESTE BLOQUE ---
       resources {
         limits = {
           memory = "1Gi"
@@ -139,7 +135,7 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      # Variables de entorno que tu app necesitará
+      # Environment variables for the application container
       env {
         name  = "DB_HOST"
         value = google_sql_database_instance.postgres.public_ip_address
@@ -168,7 +164,7 @@ resource "google_cloud_run_v2_service" "app" {
   }
 }
 
-# --- Hacer la app pública (accesible desde internet) ---
+# --- Make the app public (accessible from the internet) ---
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
   location = var.gcp_region
   name     = google_cloud_run_v2_service.app.name
@@ -176,14 +172,14 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
   member   = "allUsers"
 }
 
-# --- Información importante que necesitas ---
+# --- Outputs ---
 output "app_url" {
-  description = "URL de tu aplicación"
+  description = "URL of your application."
   value       = google_cloud_run_v2_service.app.uri
 }
 
 output "db_connection_info" {
-  description = "Información para conectar a la base de datos"
+  description = "Information to connect to the database."
   value = {
     host     = google_sql_database_instance.postgres.public_ip_address
     database = "rag_db"
@@ -194,11 +190,11 @@ output "db_connection_info" {
 }
 
 output "service_account_email" {
-  description = "Email de la Service Account para generar credenciales"
+  description = "Email of the Service Account to generate credentials."
   value       = google_service_account.api_service_account.email
 }
 
 output "docker_repository" {
-  description = "Repositorio donde subir tu imagen Docker"
+  description = "Repository where you should upload your Docker image."
   value       = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/rag-app"
 }
