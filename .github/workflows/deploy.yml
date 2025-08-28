@@ -9,7 +9,7 @@ env:
   REGION: us-central1
   REPOSITORY: rag-app
   IMAGE: rag-api
-  LABEL: v2
+  LABEL: v3
 
 jobs:
   # === Job 1: Run pre-commit checks ===
