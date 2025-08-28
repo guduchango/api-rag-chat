@@ -131,6 +131,14 @@ resource "google_cloud_run_v2_service" "app" {
         container_port = 8000
       }
 
+       # --- AÑADE ESTE BLOQUE ---
+      resources {
+        limits = {
+          memory = "1Gi"
+          cpu    = "1"
+        }
+      }
+
       # Variables de entorno que tu app necesitará
       env {
         name  = "DB_HOST"
