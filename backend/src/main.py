@@ -90,15 +90,12 @@ app = FastAPI(
 )
 
 # --- Configuración de CORS ---
-# Se agrega "*" para permitir el acceso desde cualquier origen,
-# incluyendo el frontend desplegado en Firebase Hosting.
-# Para un entorno de producción más estricto, se podría reemplazar "*"
-# por la URL específica de Firebase: "https://<tu-proyecto-id>.web.app".
-origins = [
-    "http://localhost:8080",  # Origen del frontend de Vue en desarrollo
-    "http://localhost:5173",  # Origen de Vite en desarrollo
-    "*",
-]
+# Cargar orígenes desde una variable de entorno, separados por comas.
+# Usar valores por defecto para desarrollo local si la variable no está presente.
+allowed_origins_str = os.environ.get(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5173"
+)
+origins = [origin.strip() for origin in allowed_origins_str.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
