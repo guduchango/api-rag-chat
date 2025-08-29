@@ -54,6 +54,8 @@ crash.log
 # Archivos de entorno
 .env
 *.secret
+.env.*
+
 gcp-credentials.json
 github-actions-key.json
 build_and_push.sh
@@ -61,3 +63,6 @@ firebase-actions-key.json
 
 
 data/
+
+# --- Firebase ---
+.firebase/

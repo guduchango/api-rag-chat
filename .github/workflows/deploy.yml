@@ -4,11 +4,15 @@ on:
   push:
     branches: [ main ]
 
+# Usar variables para la configuración permite cambiarla sin modificar el código
+# Las variables se gestionan en Settings > Secrets and variables > Actions > Variables
 env:
-  PROJECT_ID: rag-project-469718
-  REGION: us-central1
-  REPOSITORY: rag-app
-  BACKEND_IMAGE: rag-api
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REGISTRY_REPO: ${{ vars.ARTIFACT_REGISTRY_REPO }}
+  BACKEND_SERVICE_NAME: ${{ vars.BACKEND_SERVICE_NAME }}
+  BACKEND_IMAGE_NAME: ${{ vars.BACKEND_IMAGE_NAME }}
 
 jobs:
   # === Job 1: Run pre-commit checks ===
@@ -58,22 +62,22 @@ jobs:
       - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: 🐳 Configure Docker
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: 🏗️ Build & Push Backend Image
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.tag }} -f backend/Dockerfile backend
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.tag }}
+          docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ steps.tag.outputs.tag }} -f backend/Dockerfile backend
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
 
       - name: 🚀 Deploy Backend to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          service: rag-app
-          region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ needs.build-and-push.outputs.tag }}
+          service: ${{ env.BACKEND_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:${{ needs.build-and-push.outputs.tag }}
 
   # === Job 3: Build & Deploy Frontend ===
   build-and-deploy-frontend:
@@ -84,9 +88,12 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🏗️ Build Frontend
+      - name: 🏗️ Create .env file and Build Frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: |
           cd frontend
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env.production
           npm install
           npm run build
 
@@ -94,7 +101,7 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RAG_PROJECT_469718 }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}'
           channelId: live
-          projectId: rag-project-469718
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
           entryPoint: ./frontend
