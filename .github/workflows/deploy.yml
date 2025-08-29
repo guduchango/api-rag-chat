@@ -28,11 +28,11 @@ jobs:
         with:
           poetry-version: "1.8.3"
 
-      - name: 📥 Install dependencies
-        run: poetry install
+      - name: 📥 Install backend dependencies
+        run: poetry -C backend install
 
-      - name: ✅ Run pre-commit
-        run: poetry run pre-commit run --all-files
+      - name: ✅ Run pre-commit checks
+        run: poetry -C backend run pre-commit run --all-files
 
   # === Job 2: Build & Deploy Backend ===
   build-and-deploy-backend:
