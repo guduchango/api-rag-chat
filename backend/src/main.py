@@ -90,12 +90,12 @@ app = FastAPI(
 )
 
 # --- Configuración de CORS ---
-# Se especifican los orígenes permitidos para mayor seguridad.
-origins = [
-    "http://localhost:8080",  # Origen para desarrollo local
-    "http://localhost:5173",  # Origen para desarrollo con Vite
-    "https://rag-project-469718-308a5.web.app",  # URL de producción en Firebase
-]
+# Cargar orígenes desde una variable de entorno, separados por comas.
+# Usar valores por defecto para desarrollo local si la variable no está presente.
+allowed_origins_str = os.environ.get(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5173"
+)
+origins = [origin.strip() for origin in allowed_origins_str.split(",")]
 
 app.add_middleware(
     CORSMiddleware,

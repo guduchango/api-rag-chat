@@ -21,6 +21,12 @@ variable "backend_docker_image_name" {
   default     = "rag-api"
 }
 
+variable "cors_allowed_origins" {
+  type        = string
+  description = "Comma-separated list of allowed origins for CORS."
+  default     = "https://rag-project-469718-308a5.web.app,http://localhost:8080,http://localhost:5173"
+}
+
 # --- Terraform Configuration ---
 terraform {
   required_version = ">= 1.0"
@@ -165,6 +171,11 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "GCP_PROJECT_ID"
         value = var.gcp_project_id
+      }
+
+      env {
+        name  = "CORS_ALLOWED_ORIGINS"
+        value = var.cors_allowed_origins
       }
     }
   }
