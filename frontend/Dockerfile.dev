@@ -1,0 +1,15 @@
+FROM node:20
+
+WORKDIR /app
+
+# Copiamos primero package.json para cachear npm install
+COPY package*.json ./
+
+RUN npm install
+
+# Copiamos el resto del código
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

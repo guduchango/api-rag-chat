@@ -1,6 +1,7 @@
 # main.py - Con debugging mejorado para Cloud Run
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 import os
@@ -86,6 +87,25 @@ app = FastAPI(
     description="Una API para generar prompts RAG usando Vertex AI y Cloud SQL.",
     version="2.0.0",
     lifespan=lifespan,
+)
+
+# --- Configuración de CORS ---
+# Se agrega "*" para permitir el acceso desde cualquier origen,
+# incluyendo el frontend desplegado en Firebase Hosting.
+# Para un entorno de producción más estricto, se podría reemplazar "*"
+# por la URL específica de Firebase: "https://<tu-proyecto-id>.web.app".
+origins = [
+    "http://localhost:8080",  # Origen del frontend de Vue en desarrollo
+    "http://localhost:5173",  # Origen de Vite en desarrollo
+    "*",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Incluir rutas

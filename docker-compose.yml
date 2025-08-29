@@ -14,9 +14,24 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: rag-frontend-local
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # evita que el bind mount borre node_modules
+    working_dir: /app
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - api
+
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.dev
     container_name: rag-api-local
     ports:
@@ -29,7 +44,7 @@ services:
       - db
     volumes:
       - ./gcp-credentials.json:/app/gcp-credentials.json
-      - .:/app
+      - ./backend:/app
     command: sh -c "poetry install && poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:

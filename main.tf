@@ -15,6 +15,12 @@ variable "gcp_region" {
   default     = "us-central1"
 }
 
+variable "backend_docker_image_name" {
+  type        = string
+  description = "The Docker image name for the backend."
+  default     = "rag-api"
+}
+
 # --- Terraform Configuration ---
 terraform {
   required_version = ">= 1.0"
@@ -62,7 +68,6 @@ resource "google_sql_database_instance" "postgres" {
   settings {
     tier = "db-f1-micro" # The cheapest tier
 
-    # Allow public access (simpler for getting started)
     ip_configuration {
       ipv4_enabled = true
       authorized_networks {
@@ -72,22 +77,24 @@ resource "google_sql_database_instance" "postgres" {
     }
   }
 
-  deletion_protection = false # To allow easy deletion during testing
+  deletion_protection = false
 
   depends_on = [google_project_service.required_apis]
 }
 
 # --- Specific Database ---
 resource "google_sql_database" "app_db" {
-  instance = google_sql_database_instance.postgres.name
-  name     = "rag_db"
+  instance   = google_sql_database_instance.postgres.name
+  name       = "rag_db"
+  depends_on = [google_sql_database_instance.postgres]
 }
 
 # --- Database User ---
 resource "google_sql_user" "app_user" {
-  instance = google_sql_database_instance.postgres.name
-  name     = "rag_user"
-  password = random_password.db_password.result
+  instance   = google_sql_database_instance.postgres.name
+  name       = "rag_user"
+  password   = random_password.db_password.result
+  depends_on = [google_sql_database_instance.postgres]
 }
 
 # --- Service Account for the Application ---
@@ -113,7 +120,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
   depends_on = [google_project_service.required_apis]
 }
 
-# --- Cloud Run Service (Docker container) ---
+# --- Cloud Run Service (Backend) ---
 resource "google_cloud_run_v2_service" "app" {
   name     = "rag-app"
   location = var.gcp_region
@@ -122,7 +129,7 @@ resource "google_cloud_run_v2_service" "app" {
     service_account = google_service_account.api_service_account.email
 
     containers {
-      image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/rag-app/rag-api:${var.docker_image_tag}"
+      image = "${var.gcp_region}-docker.pkg.dev/${var.gcp_project_id}/${google_artifact_registry_repository.docker_repo.repository_id}/${var.backend_docker_image_name}:${var.docker_image_tag}"
 
       ports {
         container_port = 8000
@@ -135,7 +142,6 @@ resource "google_cloud_run_v2_service" "app" {
         }
       }
 
-      # Environment variables for the application container
       env {
         name  = "DB_HOST"
         value = google_sql_database_instance.postgres.public_ip_address
@@ -173,8 +179,8 @@ resource "google_cloud_run_v2_service_iam_member" "public_access" {
 }
 
 # --- Outputs ---
-output "app_url" {
-  description = "URL of your application."
+output "backend_app_url" {
+  description = "URL of your backend application."
   value       = google_cloud_run_v2_service.app.uri
 }
 

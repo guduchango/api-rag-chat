@@ -3,17 +3,25 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
+        # Restringe black al directorio backend y apunta a su configuración
+        files: ^backend/
+        args: [--config, backend/pyproject.toml]
 
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.12.1
+  # Actualizado al nuevo repositorio oficial de ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4  # Usando una versión moderna y estable de ruff
     hooks:
       - id: ruff
-        args: [--fix]  # aplica fixes automáticos
+        # Restringe ruff al directorio backend y apunta a su configuración
+        files: ^backend/
+        args: [--fix, --config=backend/pyproject.toml]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v4.6.0  # Usando una versión reciente y estable
     hooks:
       - id: check-merge-conflict
       - id: check-yaml
       - id: end-of-file-fixer
+        # Excluir archivos lock que no deben ser modificados
+        exclude: package-lock\.json$
       - id: trailing-whitespace

@@ -8,8 +8,7 @@ env:
   PROJECT_ID: rag-project-469718
   REGION: us-central1
   REPOSITORY: rag-app
-  IMAGE: rag-api
-  LABEL: v3
+  BACKEND_IMAGE: rag-api
 
 jobs:
   # === Job 1: Run pre-commit checks ===
@@ -35,17 +34,21 @@ jobs:
       - name: ✅ Run pre-commit
         run: poetry run pre-commit run --all-files
 
-  # === Job 2: Build & Push Docker Image ===
-  build-and-push:
-    name: Build & Push
+  # === Job 2: Build & Deploy Backend ===
+  build-and-deploy-backend:
+    name: Build & Deploy Backend
     runs-on: ubuntu-latest
-    needs: pre-commit   # 👈 solo corre si pasa pre-commit
+    needs: pre-commit
     permissions:
       contents: read
       id-token: write
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+
+      - name: 🏷️ Generate image tag
+        id: tag
+        run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -58,30 +61,40 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: 🐳 Configure Docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: 🏗️ Build & Push Backend Image
         run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.tag }} -f backend/Dockerfile backend
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.tag }}
 
-      - name: 🏗️ Build Docker image
-        run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }} .
-
-      - name: 📤 Push to Artifact Registry
-        run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }}
-
-  # === Job 3: Deploy to Cloud Run ===
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    steps:
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: 🚀 Deploy to Cloud Run
+      - name: 🚀 Deploy Backend to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: rag-app
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{env.IMAGE}}:${{ env.LABEL }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.BACKEND_IMAGE }}:${{ needs.build-and-push.outputs.tag }}
+
+  # === Job 3: Build & Deploy Frontend ===
+  build-and-deploy-frontend:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: pre-commit
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Build Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: 🚀 Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RAG_PROJECT_469718 }}'
+          channelId: live
+          projectId: rag-project-469718
+          entryPoint: ./frontend
