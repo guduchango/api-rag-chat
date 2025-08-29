@@ -57,5 +57,7 @@ crash.log
 gcp-credentials.json
 github-actions-key.json
 build_and_push.sh
+firebase-actions-key.json
+
 
 data/
