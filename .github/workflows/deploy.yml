@@ -111,11 +111,10 @@ jobs:
           npm run build
 
       - name: 🚀 Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v1
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}'
           channelId: live
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
-          siteId: ${{ env.FIREBASE_HOSTING_SITE_ID }}
           entryPoint: ./frontend
