@@ -111,13 +111,9 @@ jobs:
       - name: 📦 Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: 🔐 Authenticate to Firebase
-        run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > ${HOME}/firebase-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/firebase-key.json
-          gcloud auth activate-service-account --key-file=${HOME}/firebase-key.json
-
-      - name: 🚀 Deploy to Firebase Hosting
+      - name: 🚀 Deploy to Firebase Hosting (CI Token)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }}
         run: |
           cd frontend
-          firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }} --non-interactive
+          firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }} --token $FIREBASE_TOKEN --non-interactive
