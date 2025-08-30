@@ -23,6 +23,7 @@ env:
   BACKEND_SERVICE_NAME: ${{ vars.BACKEND_SERVICE_NAME }}
   BACKEND_IMAGE_NAME: ${{ vars.BACKEND_IMAGE_NAME }}
   BACKEND_IMAGE_NAME_LABEL: ${{ vars.BACKEND_IMAGE_NAME_LABEL }}
+  FIREBASE_HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_ID }}
 
 jobs:
   # === Job 1: Run pre-commit checks ===
@@ -116,4 +117,5 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}'
           channelId: live
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          siteId: ${{ env.FIREBASE_HOSTING_SITE_ID }}
           entryPoint: ./frontend
