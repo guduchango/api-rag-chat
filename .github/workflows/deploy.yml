@@ -13,8 +13,6 @@ on:
           - backend
           - frontend
 
-# Usar variables para la configuración permite cambiarla sin modificar el código
-# Las variables se gestionan en Settings > Secrets and variables > Actions > Variables
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -117,8 +115,9 @@ jobs:
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > ${HOME}/firebase-key.json
           export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/firebase-key.json
+          gcloud auth activate-service-account --key-file=${HOME}/firebase-key.json
 
       - name: 🚀 Deploy to Firebase Hosting
         run: |
           cd frontend
-          firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
+          firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }} --non-interactive
