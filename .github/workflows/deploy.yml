@@ -110,11 +110,15 @@ jobs:
           npm install
           npm run build
 
-      - name: 🚀 Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: 📦 Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}'
-          channelId: live
-          projectId: ${{ env.FIREBASE_PROJECT_ID }}
-          entryPoint: ./frontend
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: 🚀 Deploy to Firebase Hosting
+        run: |
+          cd frontend
+          firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
